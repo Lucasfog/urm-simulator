@@ -1,35 +1,23 @@
-import { useState } from 'react'
-import type { Instruction, Op } from '../lib/urm'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import Editor from '@monaco-editor/react'
+import { Code2 } from 'lucide-react'
+import type * as Monaco from 'monaco-editor'
+import { URM_LANGUAGE_ID, setupUrmLanguage, toUrmMarkers } from '../lib/urmMonaco'
+import type { Op } from '../lib/urm'
 import { instructionHint } from '../lib/urm'
 import { Badge } from './ui/badge'
 import { Button } from './ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import { Input } from './ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs'
-import { Textarea } from './ui/textarea'
-
-type ProgramEditorProps = {
-  program: Instruction[]
-  activePc: number
-  halted: boolean
-  editorMode: 'blocks' | 'text'
-  setEditorMode: (mode: 'blocks' | 'text') => void
-  programText: string
-  setProgramText: (value: string) => void
-  syntaxErrors: string[]
-  onApplyTextProgram: () => void
-  onLoadTextFromBlocks: () => void
-  onUpdateInstruction: (id: string, key: 'a' | 'b' | 'c', value: string) => void
-  onRemoveInstruction: (id: string) => void
-  onMoveInstruction: (sourceId: string, targetId: string) => void
-  onInsertInstructionAt: (op: Op, index: number) => void
-}
+import type { EditorMode, ProgramEditorProps } from './types/program-editor.types'
 
 export function ProgramEditor(props: ProgramEditorProps) {
   const {
     program,
     activePc,
     halted,
+    isRunning,
     editorMode,
     setEditorMode,
     programText,
@@ -44,167 +32,346 @@ export function ProgramEditor(props: ProgramEditorProps) {
   } = props
 
   const [draggingId, setDraggingId] = useState<string | null>(null)
+  const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null)
+  const monacoRef = useRef<typeof Monaco | null>(null)
+  const activeLineDecorationsRef = useRef<string[]>([])
+
+  const updateMarkers = useCallback((value: string) => {
+    if (!editorRef.current || !monacoRef.current) {
+      return
+    }
+
+    const model = editorRef.current.getModel()
+    if (!model) {
+      return
+    }
+
+    const markers = toUrmMarkers(value, monacoRef.current)
+    monacoRef.current.editor.setModelMarkers(model, URM_LANGUAGE_ID, markers)
+  }, [])
+
+  const handleEditorMount = useCallback(
+    (editor: Monaco.editor.IStandaloneCodeEditor, monaco: typeof Monaco) => {
+      editorRef.current = editor
+      monacoRef.current = monaco
+      setupUrmLanguage(monaco)
+      updateMarkers(editor.getValue())
+    },
+    [updateMarkers]
+  )
+
+  const handleEditorChange = useCallback(
+    (value: string | undefined) => {
+      const next = value ?? ''
+      setProgramText(next)
+      updateMarkers(next)
+    },
+    [setProgramText, updateMarkers]
+  )
+
+  useEffect(() => {
+    updateMarkers(programText)
+  }, [programText, updateMarkers])
+
+  useEffect(() => {
+    const editor = editorRef.current
+    const monaco = monacoRef.current
+    if (!editor || !monaco) {
+      return
+    }
+
+    if (editorMode !== 'text' || !isRunning || halted) {
+      activeLineDecorationsRef.current = editor.deltaDecorations(activeLineDecorationsRef.current, [])
+      return
+    }
+
+    const lines = programText.split('\n')
+    let instructionIndex = 0
+    let activeLineNumber = 0
+
+    for (let index = 0; index < lines.length; index += 1) {
+      if (lines[index].trim().length === 0) {
+        continue
+      }
+
+      if (instructionIndex === activePc) {
+        activeLineNumber = index + 1
+        break
+      }
+
+      instructionIndex += 1
+    }
+
+    if (activeLineNumber <= 0) {
+      activeLineDecorationsRef.current = editor.deltaDecorations(activeLineDecorationsRef.current, [])
+      return
+    }
+
+    activeLineDecorationsRef.current = editor.deltaDecorations(activeLineDecorationsRef.current, [
+      {
+        range: new monaco.Range(activeLineNumber, 1, activeLineNumber, 1),
+        options: {
+          isWholeLine: true,
+          className: 'urm-active-line-decoration',
+          linesDecorationsClassName: 'urm-active-line-gutter',
+        },
+      },
+    ])
+
+    editor.revealLineInCenterIfOutsideViewport(activeLineNumber)
+  }, [activePc, editorMode, halted, isRunning, programText])
+
+  useEffect(() => {
+    return () => {
+      const editor = editorRef.current
+      if (!editor) {
+        return
+      }
+      editor.deltaDecorations(activeLineDecorationsRef.current, [])
+    }
+  }, [])
 
   return (
-    <Card className="h-full rounded-2xl border-slate-900 bg-[#0a0c11]">
-      <CardHeader className="pb-2">
-        <div className="flex items-center justify-between gap-2">
-          <CardTitle className="text-3xl font-normal text-slate-100">Program</CardTitle>
-          <Badge variant="secondary">{program.length} linhas</Badge>
+    <Card className="flex h-full min-w-0 flex-col rounded-2xl border border-[#3c3c3c] bg-[#252526]/70 backdrop-blur-md shadow-xl">
+      <CardHeader className="pb-4 pt-5 px-5">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#3c3c3c]/70 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="rounded-lg bg-[#1e1e1e]/90 p-2">
+              <Code2 size={20} className="text-[#569cd6]" />
+            </div>
+            <CardTitle className="text-xl font-semibold tracking-tight text-[#d4d4d4]">Programa</CardTitle>
+          </div>
+          <Badge className="border-none bg-[#2d2d30] px-3 py-1 text-xs text-[#9b9b9b] shadow-inner hover:bg-[#3a3d41]">
+            {program.length} linhas
+          </Badge>
         </div>
       </CardHeader>
 
-      <CardContent>
-        <Tabs value={editorMode} onValueChange={(value) => setEditorMode(value as 'blocks' | 'text')}>
-          <TabsList className="w-full justify-start gap-1 bg-[#05070b]">
-            <TabsTrigger value="blocks" className="min-w-40">
-              Modo blocos
+      <CardContent className="min-w-0 flex-1 overflow-y-auto px-5 pb-5 custom-scrollbar">
+        <Tabs value={editorMode} onValueChange={(value) => setEditorMode(value as EditorMode)} className="min-w-0 flex h-full flex-col">
+          <TabsList className="mb-2 flex h-14 w-full items-stretch gap-1 rounded-xl border border-[#3c3c3c]/80 bg-[#1e1e1e]/90 p-1.5">
+            <TabsTrigger
+              value="blocks"
+              className="flex-1 !h-full min-w-0 rounded-lg px-5 text-sm font-semibold leading-none text-[#9b9b9b] after:hidden hover:text-[#d4d4d4] data-[state=active]:bg-[#0e639c] data-[state=active]:text-[#f0f6fc]"
+            >
+              Modo Blocos
             </TabsTrigger>
-            <TabsTrigger value="text" className="min-w-40">
-              Modo texto
+            <TabsTrigger
+              value="text"
+              className="flex-1 !h-full min-w-0 rounded-lg px-5 text-sm font-semibold leading-none text-[#9b9b9b] after:hidden hover:text-[#d4d4d4] data-[state=active]:bg-[#0e639c] data-[state=active]:text-[#f0f6fc]"
+            >
+              Modo Texto
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="blocks" className="mt-4 space-y-2">
-            {program.map((instruction, index) => (
-              <article
-                key={instruction.id}
-                draggable
-                onDragStart={() => setDraggingId(instruction.id)}
-                onDragOver={(event) => event.preventDefault()}
-                onDrop={() => {
-                  if (!draggingId) {
-                    return
-                  }
+          <TabsContent value="blocks" className="mt-4 space-y-3 flex-1 pb-4">
+            {program.length === 0 && (
+              <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[#3c3c3c] bg-[#1e1e1e]/25 p-12 text-center">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" className="mb-4 text-[#6d6d6d]" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                <p className="text-sm text-[#a0a0a0]">O programa está vazio.</p>
+                <p className="mt-1 text-xs text-[#7f7f7f]">Adicione blocos pela barra lateral.</p>
+              </div>
+            )}
+            {program.map((instruction, index) => {
+              const isDragging = draggingId === instruction.id;
+              const isActive = activePc === index && !halted;
+              
+              let badgeColor = "bg-[#2d2d30] text-[#b0b0b0]";
+              if (instruction.op === 'Z') badgeColor = "border border-[#f14c4c]/35 bg-[#f14c4c]/15 text-[#f14c4c]";
+              if (instruction.op === 'S') badgeColor = "border border-[#4ec9b0]/35 bg-[#4ec9b0]/15 text-[#4ec9b0]";
+              if (instruction.op === 'T') badgeColor = "border border-[#569cd6]/35 bg-[#569cd6]/15 text-[#569cd6]";
+              if (instruction.op === 'J') badgeColor = "border border-[#c586c0]/35 bg-[#c586c0]/15 text-[#c586c0]";
 
-                  if (draggingId.startsWith('NEW_')) {
-                    const op = draggingId.replace('NEW_', '') as Op
-                    onInsertInstructionAt(op, index)
+              return (
+                <article
+                  key={instruction.id}
+                  draggable
+                  onDragStart={() => setDraggingId(instruction.id)}
+                  onDragOver={(event) => event.preventDefault()}
+                  onDragEnd={() => setDraggingId(null)}
+                  onDrop={() => {
+                    if (!draggingId) return
+                    if (draggingId.startsWith('NEW_')) {
+                      const op = draggingId.replace('NEW_', '') as Op
+                      onInsertInstructionAt(op, index)
+                      setDraggingId(null)
+                      return
+                    }
+                    onMoveInstruction(draggingId, instruction.id)
                     setDraggingId(null)
-                    return
-                  }
+                  }}
+                  className={`group relative min-w-0 rounded-xl transition-all duration-200 overflow-hidden outline-none cursor-grab active:cursor-grabbing
+                    ${isDragging ? 'opacity-40 scale-[0.98] blur-[2px]' : 'opacity-100 scale-100 hover:shadow-lg hover:z-10'}
+                    ${isActive 
+                      ? 'border-[#007fd4] bg-[#264f78]/35 shadow-[0_0_15px_rgba(0,127,212,0.22)] ring-1 ring-[#007fd4]' 
+                      : 'border border-[#3c3c3c] bg-[#1e1e1e]/55 hover:border-[#5a5a5a]'}
+                  `}
+                >
+                  {/* Left accent border */}
+                  <div className={`absolute left-0 top-0 bottom-0 w-1 ${instruction.op === 'Z' ? 'bg-[#f14c4c]' : instruction.op === 'S' ? 'bg-[#4ec9b0]' : instruction.op === 'T' ? 'bg-[#569cd6]' : 'bg-[#c586c0]'} ${isActive ? 'opacity-100 shadow-[0_0_10px_currentColor]' : 'opacity-50 group-hover:opacity-100'}`} />
+                  
+                  <div className="flex flex-col sm:flex-row gap-3 p-3 pl-4 items-start sm:items-center w-full">
+                    {/* Header info / Line Number */}
+                    <div className="flex items-center gap-3 shrink-0">
+                      <div className="flex items-center justify-center w-5 h-5 opacity-20 group-hover:opacity-100 transition-opacity">
+                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round">
+                          <circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/>
+                          <circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/>
+                        </svg>
+                      </div>
+                      <Badge variant="outline" className="border-[#3c3c3c] bg-[#1e1e1e] font-mono text-[10px] uppercase text-[#858585]">L{index + 1}</Badge>
+                      <Badge className={`px-2 py-0.5 rounded shadow-none font-bold ${badgeColor}`}>{instruction.op}</Badge>
+                    </div>
 
-                  onMoveInstruction(draggingId, instruction.id)
-                  setDraggingId(null)
-                }}
-                className={`rounded-xl border p-3 ${
-                  activePc === index && !halted
-                    ? 'border-sky-700 bg-sky-950/30'
-                    : 'border-slate-900 bg-[#11141c]'
-                }`}
-              >
-                <div className="mb-2 flex items-center justify-between">
-                  <Badge variant="secondary">L{index + 1}</Badge>
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => onRemoveInstruction(instruction.id)}
-                  >
-                    Remover
-                  </Button>
-                </div>
+                    {/* Inputs */}
+                    <div className="flex flex-1 flex-wrap items-center gap-3 border-l border-l-transparent pl-0 sm:border-l-[#3c3c3c] sm:pl-3">
+                      {(instruction.op === 'Z' || instruction.op === 'S') && (
+                        <label className="flex shrink-0 items-center gap-2 text-xs font-semibold text-[#9b9b9b]">
+                          <span className="opacity-70">n</span>
+                          <Input
+                            type="number"
+                            min={0}
+                            value={instruction.a}
+                            className="h-8 w-16 border-[#3c3c3c] bg-[#1e1e1e]/80 px-2 text-center font-mono text-sm text-[#d4d4d4] focus:border-[#007fd4] focus:ring-[#007fd4]"
+                            onChange={(event) => onUpdateInstruction(instruction.id, 'a', event.target.value)}
+                          />
+                        </label>
+                      )}
 
-                <div className="grid gap-2 sm:grid-cols-3">
-                  <div className="text-sm font-semibold text-slate-100">{instruction.op}</div>
+                      {instruction.op === 'T' && (
+                        <>
+                          <label className="flex shrink-0 items-center gap-2 text-xs font-semibold text-[#9b9b9b]">
+                            <span className="opacity-70">m</span>
+                            <Input
+                              type="number"
+                              min={0}
+                              value={instruction.a}
+                              className="h-8 w-16 border-[#3c3c3c] bg-[#1e1e1e]/80 px-2 text-center font-mono text-sm text-[#d4d4d4] focus:border-[#007fd4] focus:ring-[#007fd4]"
+                              onChange={(event) => onUpdateInstruction(instruction.id, 'a', event.target.value)}
+                            />
+                          </label>
+                          <label className="flex shrink-0 items-center gap-2 text-xs font-semibold text-[#9b9b9b]">
+                            <span className="opacity-70">n</span>
+                            <Input
+                              type="number"
+                              min={0}
+                              value={instruction.b}
+                              className="h-8 w-16 border-[#3c3c3c] bg-[#1e1e1e]/80 px-2 text-center font-mono text-sm text-[#d4d4d4] focus:border-[#007fd4] focus:ring-[#007fd4]"
+                              onChange={(event) => onUpdateInstruction(instruction.id, 'b', event.target.value)}
+                            />
+                          </label>
+                        </>
+                      )}
 
-                  {(instruction.op === 'Z' || instruction.op === 'S') && (
-                    <label className="grid gap-1 text-xs text-slate-400">
-                      n
-                      <Input
-                        type="number"
-                        min={0}
-                        value={instruction.a}
-                        onChange={(event) => onUpdateInstruction(instruction.id, 'a', event.target.value)}
-                      />
-                    </label>
-                  )}
-
-                  {instruction.op === 'T' && (
-                    <>
-                      <label className="grid gap-1 text-xs text-slate-400">
-                        m
-                        <Input
-                          type="number"
-                          min={0}
-                          value={instruction.a}
-                          onChange={(event) => onUpdateInstruction(instruction.id, 'a', event.target.value)}
-                        />
-                      </label>
-                      <label className="grid gap-1 text-xs text-slate-400">
-                        n
-                        <Input
-                          type="number"
-                          min={0}
-                          value={instruction.b}
-                          onChange={(event) => onUpdateInstruction(instruction.id, 'b', event.target.value)}
-                        />
-                      </label>
-                    </>
-                  )}
-
-                  {instruction.op === 'J' && (
-                    <>
-                      <label className="grid gap-1 text-xs text-slate-400">
-                        m
-                        <Input
-                          type="number"
-                          min={0}
-                          value={instruction.a}
-                          onChange={(event) => onUpdateInstruction(instruction.id, 'a', event.target.value)}
-                        />
-                      </label>
-                      <label className="grid gap-1 text-xs text-slate-400">
-                        n
-                        <Input
-                          type="number"
-                          min={0}
-                          value={instruction.b}
-                          onChange={(event) => onUpdateInstruction(instruction.id, 'b', event.target.value)}
-                        />
-                      </label>
-                      <label className="grid gap-1 text-xs text-slate-400">
-                        q
-                        <Input
-                          type="number"
-                          min={1}
-                          value={instruction.c}
-                          onChange={(event) => onUpdateInstruction(instruction.id, 'c', event.target.value)}
-                        />
-                      </label>
-                    </>
-                  )}
-
-                  <small className="sm:col-span-3 text-xs text-slate-500">{instructionHint(instruction)}</small>
-                </div>
-              </article>
-            ))}
+                      {instruction.op === 'J' && (
+                        <>
+                          <label className="flex shrink-0 items-center gap-2 text-xs font-semibold text-[#9b9b9b]">
+                            <span className="opacity-70">m</span>
+                            <Input
+                              type="number"
+                              min={0}
+                              value={instruction.a}
+                              className="h-8 w-14 border-[#3c3c3c] bg-[#1e1e1e]/80 px-2 text-center font-mono text-sm text-[#d4d4d4] focus:border-[#007fd4] focus:ring-[#007fd4] sm:w-16"
+                              onChange={(event) => onUpdateInstruction(instruction.id, 'a', event.target.value)}
+                            />
+                          </label>
+                          <label className="flex shrink-0 items-center gap-2 text-xs font-semibold text-[#9b9b9b]">
+                            <span className="opacity-70">n</span>
+                            <Input
+                              type="number"
+                              min={0}
+                              value={instruction.b}
+                              className="h-8 w-14 border-[#3c3c3c] bg-[#1e1e1e]/80 px-2 text-center font-mono text-sm text-[#d4d4d4] focus:border-[#007fd4] focus:ring-[#007fd4] sm:w-16"
+                              onChange={(event) => onUpdateInstruction(instruction.id, 'b', event.target.value)}
+                            />
+                          </label>
+                          <label className="flex shrink-0 items-center gap-2 text-xs font-semibold text-[#9b9b9b]">
+                            <span className="opacity-70">q</span>
+                            <Input
+                              type="number"
+                              min={1}
+                              value={instruction.c}
+                              className="h-8 w-14 border-[#3c3c3c] bg-[#1e1e1e]/80 px-2 text-center font-mono text-sm text-[#d4d4d4] focus:border-[#007fd4] focus:ring-[#007fd4] sm:w-16"
+                              onChange={(event) => onUpdateInstruction(instruction.id, 'c', event.target.value)}
+                            />
+                          </label>
+                        </>
+                      )}
+                    </div>
+                    
+                    <div className="flex items-center gap-3 sm:ml-auto w-full sm:w-auto h-full justify-between">
+                       <small className="hidden max-w-[120px] text-[11px] italic leading-tight text-[#7f7f7f] md:block sm:text-right">
+                        {instructionHint(instruction)}
+                       </small>
+                       <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="ml-auto h-8 w-8 rounded-full text-[#858585] transition-colors hover:bg-[#f14c4c]/12 hover:text-[#f14c4c] sm:ml-0"
+                        onClick={() => onRemoveInstruction(instruction.id)}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                        </svg>
+                      </Button>
+                    </div>
+                  </div>
+                </article>
+              )
+            })}
           </TabsContent>
 
-          <TabsContent value="text" className="mt-4 space-y-3">
-            <p className="text-sm text-slate-400">Digite uma instrução por linha. Exemplo: z(0) e j(1,2,6).</p>
-            <Textarea
-              value={programText}
-              onChange={(event) => setProgramText(event.target.value)}
-              spellCheck={false}
-              placeholder={'z(0)\nj(1,2,6)'}
-              className="min-h-[420px] font-mono"
-            />
-            <div className="grid gap-2 sm:grid-cols-2">
-              <Button type="button" variant="primary" className="bg-slate-100 text-slate-900" onClick={onApplyTextProgram}>
+          <TabsContent value="text" className="mt-4 space-y-4 flex-1 flex flex-col">
+            <div className="flex items-center gap-3 rounded-xl border border-[#569cd6]/30 bg-[#569cd6]/10 p-3 text-[#bcdffa]">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-[#569cd6]">
+                <circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path>
+              </svg>
+              <p className="text-[13px]">Digite uma instrução por linha. Exemplo: <code className="rounded bg-[#1e1e1e] px-1 py-0.5 text-[#d4d4d4]">z(0)</code> e <code className="rounded bg-[#1e1e1e] px-1 py-0.5 text-[#d4d4d4]">j(1,2,6)</code>.</p>
+            </div>
+            <div className="flex-1 min-h-[320px] overflow-hidden rounded-xl border border-[#3c3c3c]/70 bg-[#1e1e1e]/80 shadow-inner sm:min-h-[420px]">
+              <Editor
+                value={programText}
+                onChange={handleEditorChange}
+                onMount={handleEditorMount}
+                language={URM_LANGUAGE_ID}
+                theme="vs-dark"
+                height="100%"
+                options={{
+                  minimap: { enabled: false },
+                  fontFamily: 'JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+                  fontSize: 13,
+                  lineHeight: 22,
+                  scrollBeyondLastLine: false,
+                  wordWrap: 'off',
+                  quickSuggestions: true,
+                  suggestOnTriggerCharacters: true,
+                  tabSize: 2,
+                  padding: { top: 12, bottom: 12 },
+                  overviewRulerBorder: false,
+                  automaticLayout: true,
+                }}
+              />
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 mt-auto pt-2">
+              <Button type="button" size="lg" className="bg-[#0e639c] text-[#f0f6fc] shadow-md shadow-[#0e639c]/30 transition-all hover:bg-[#1177bb] active:scale-[0.98]" onClick={onApplyTextProgram}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
                 Validar e aplicar
               </Button>
-              <Button type="button" variant="outline" onClick={onLoadTextFromBlocks}>
+              <Button type="button" size="lg" variant="outline" className="border-[#3c3c3c] bg-[#252526]/70 text-[#b0b0b0] transition-all hover:bg-[#2d2d30] hover:text-[#d4d4d4] active:scale-[0.98]" onClick={onLoadTextFromBlocks}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.59-9.21l-5.41 5.41"></path></svg>
                 Sincronizar com blocos
               </Button>
             </div>
 
             {syntaxErrors.length > 0 && (
-              <ul className="space-y-1 rounded-md border border-rose-900 bg-rose-950/40 px-3 py-2 text-sm text-rose-300">
-                {syntaxErrors.map((error) => (
-                  <li key={error}>{error}</li>
-                ))}
-              </ul>
+              <div className="flex gap-2 rounded-xl border border-[#f14c4c]/35 bg-[#3f1b1b]/45 p-4 shadow-sm">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mt-0.5 shrink-0 text-[#f14c4c]"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                <ul className="list-none space-y-1 pb-0 text-sm font-medium text-[#ff9d9d]">
+                  {syntaxErrors.map((error) => (
+                    <li key={error}>{error}</li>
+                  ))}
+                </ul>
+              </div>
             )}
           </TabsContent>
         </Tabs>

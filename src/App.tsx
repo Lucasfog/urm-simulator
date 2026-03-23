@@ -118,6 +118,12 @@ function App() {
 
   const applyTextProgram = () => {
     const parsed = parseProgramText(programText)
+    if (parsed.program.length === 0 && parsed.errors.length === 0) {
+      setSyntaxErrors(['Programa vazio: informe pelo menos uma instrucao.'])
+      setIsRunning(false)
+      return
+    }
+
     setSyntaxErrors(parsed.errors)
     if (parsed.errors.length > 0) {
       setIsRunning(false)
@@ -147,6 +153,12 @@ function App() {
   const runMachine = () => {
     if (editorMode === 'text') {
       const parsed = parseProgramText(programText)
+      if (parsed.program.length === 0 && parsed.errors.length === 0) {
+        setSyntaxErrors(['Programa vazio: informe pelo menos uma instrucao.'])
+        setIsRunning(false)
+        return
+      }
+
       setSyntaxErrors(parsed.errors)
       if (parsed.errors.length > 0) {
         setIsRunning(false)
@@ -159,6 +171,10 @@ function App() {
     }
 
     if (program.length === 0) {
+      setMachine((current) => ({
+        ...current,
+        message: 'Adicione ao menos uma instrucao para executar.',
+      }))
       return
     }
 
@@ -176,29 +192,33 @@ function App() {
 
     const timer = window.setTimeout(() => {
       stepMachine()
-    }, speedMs)
+    }, machine.steps === 0 ? 0 : speedMs)
 
     return () => {
       window.clearTimeout(timer)
     }
-  }, [isRunning, machine.halted, speedMs, stepMachine])
+  }, [isRunning, machine.halted, machine.steps, speedMs, stepMachine])
 
   return (
-    <main className="min-h-screen bg-[#090b10] text-slate-100">
-      <div className="mx-auto w-full max-w-[1440px] border-x border-slate-900/80">
-        <section className="grid min-h-screen lg:grid-cols-[280px_minmax(0,1fr)]">
-          <ControlSidebar
-            initialRegisters={initialRegisters}
-            setInitialRegisters={setInitialRegisters}
-            onLoadRegisters={loadRegistersIntoMachine}
-            onAddInstruction={addInstruction}
-          />
+    <main className="min-h-screen overflow-x-hidden bg-[#1e1e1e] text-[#cccccc] selection:bg-[#264f78]/70">
+      <div className="fixed inset-0 z-[-1] bg-[radial-gradient(ellipse_88%_70%_at_50%_-22%,rgba(14,99,156,0.25),rgba(30,30,30,0))]"></div>
+      <div className="mx-auto w-full max-w-[1536px]">
+        <section className="flex min-h-screen flex-col lg:flex-row">
+          <div className="z-10 w-full bg-[rgba(30,30,30,0.62)] backdrop-blur-xl lg:w-[320px] lg:shrink-0 lg:border-r lg:border-[#3c3c3c]/70">
+            <ControlSidebar
+              initialRegisters={initialRegisters}
+              setInitialRegisters={setInitialRegisters}
+              onLoadRegisters={loadRegistersIntoMachine}
+              onAddInstruction={addInstruction}
+            />
+          </div>
 
-          <div className="grid gap-3 p-3 lg:grid-cols-2">
+          <div className="flex-1 grid min-w-0 gap-4 p-4 lg:p-6 xl:gap-8 lg:grid-cols-2">
             <ProgramEditor
               program={program}
               activePc={machine.pc}
               halted={machine.halted}
+              isRunning={isRunning}
               editorMode={editorMode}
               setEditorMode={(mode) => {
                 setEditorMode(mode)
@@ -225,6 +245,7 @@ function App() {
               setSpeedMs={setSpeedMs}
               programLength={program.length}
               visibleRegisters={visibleRegisters}
+              stepCount={machine.steps}
               onRun={runMachine}
               onPause={() => setIsRunning(false)}
               onStep={stepMachine}

@@ -1,37 +1,32 @@
-type RegisterTapeProps = {
-  values: number[]
-  touchedRegisters: number[]
-  isRunning: boolean
-}
+import type { RegisterTapeProps } from './types/register-tape.types'
 
-export function RegisterTape({ values, touchedRegisters, isRunning }: RegisterTapeProps) {
+export function RegisterTape({ values, touchedRegisters, isRunning, stepCount }: RegisterTapeProps) {
   return (
-    <div className="relative overflow-x-auto rounded-2xl border border-slate-800 bg-[#22242b] px-4 py-5">
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        {isRunning && <div className="tape-scan h-full w-36" />}
+    <div className="relative overflow-hidden rounded-[14px] border border-[#3c3c3c]/80 bg-[#252526]/80 px-3 py-4 shadow-inner sm:px-4 sm:py-5">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden z-10">
+        {isRunning && <div className="tape-scan h-full w-36 bg-gradient-to-r from-transparent via-[#0e639c]/20 to-transparent" />}
       </div>
 
-      <div className="relative w-max min-w-full">
-        <div className="grid auto-cols-[minmax(62px,76px)] grid-flow-col border-b border-slate-600 pb-2">
-          {values.map((_, index) => (
-            <div key={`label-${index}`} className="text-center text-xs font-semibold text-slate-100">
-              R{index + 1}
-            </div>
-          ))}
-        </div>
-
-        <div className="grid auto-cols-[minmax(62px,76px)] grid-flow-col">
+      <div className="relative z-0">
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(58px,1fr))] gap-2">
           {values.map((value, index) => {
             const touched = touchedRegisters.includes(index)
             return (
               <div
-                key={`cell-${index}`}
-                className={`grid h-14 content-center justify-items-center border border-t-0 border-slate-500 bg-[#2b2d33] ${
-                  touched ? 'tape-cell-active' : ''
+                key={touched ? `cell-${index}-${stepCount}` : `cell-${index}`}
+                className={`group grid min-h-[64px] content-center justify-items-center rounded-lg border px-1 py-1 transition-all duration-300 relative overflow-hidden ${
+                  touched 
+                    ? 'border-[#4ec9b0]/50 bg-[#4ec9b0]/10 tape-cell-active shadow-[0_0_10px_rgba(78,201,176,0.18)]' 
+                    : 'border-[#3c3c3c] bg-[#1e1e1e]/70 hover:border-[#5a5a5a] hover:bg-[#252526]'
                 }`}
               >
-                <span className="font-['Source_Serif_4'] text-sm italic text-slate-300">r{index + 1}</span>
-                <strong className="font-mono text-xs text-slate-100">{value}</strong>
+                {touched && <div className="absolute inset-0 rotate-45 scale-150 transform bg-[#4ec9b0]/10"></div>}
+                <span className={`relative z-10 mb-0.5 font-mono text-[10px] tracking-wider sm:text-xs ${touched ? 'font-semibold text-[#4ec9b0]' : 'text-[#858585]'}`}>
+                  R{index}
+                </span>
+                <strong className={`relative z-10 font-mono text-base sm:text-lg ${touched ? 'text-[#d9fff5]' : 'text-[#d4d4d4]'}`}>
+                  {value}
+                </strong>
               </div>
             )
           })}
