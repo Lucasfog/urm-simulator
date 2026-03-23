@@ -1,73 +1,42 @@
-# React + TypeScript + Vite
+# URM Simulator
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Simulador visual de **URM (Unlimited Register Machine)**
 
-Currently, two official plugins are available:
+O projeto permite montar programas URM em dois formatos:
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- modo blocos (interface visual com drag and drop)
+- modo texto (editor Monaco com validacao de sintaxe)
 
-## React Compiler
+Tambem inclui execucao passo a passo, execucao continua com controle de velocidade, fita de registradores e destaque da instrucao ativa.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Visao geral
 
-## Expanding the ESLint configuration
+A URM e um modelo teorico de computacao baseado em registradores naturais e instrucoes simples. Este simulador foi criado para estudo e experimentacao de programas URM, com foco em feedback visual durante a execucao.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Funcionalidades
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+- editor em **modo blocos** para criar e reordenar instrucoes
+- editor em **modo texto** com Monaco Editor
+- validacao de sintaxe em tempo real no modo texto
+- autocomplete para `z(n)`, `s(n)`, `t(m,n)` e `j(m,n,q)`
+- controles de execucao: executar, pausar, passo unico e reiniciar
+- ajuste de velocidade (ms por passo)
+- exibicao de `PC`, total de passos e estado da maquina
+- fita de registradores com destaque dos registradores tocados
+- limite de seguranca de passos para evitar loop infinito (`MAX_STEPS = 800`)
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+## Instrucoes URM suportadas
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+- `Z(n)`: zera o registrador `R_n`
+- `S(n)`: incrementa `R_n`
+- `T(m,n)`: copia o valor de `R_m` para `R_n`
+- `J(m,n,q)`: se `R_m = R_n`, salta para a linha `q`
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+No modo texto, use uma instrucao por linha, em minusculo ou maiusculo:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```txt
+z(0)
+s(0)
+t(0,1)
+j(1,2,6)
 ```
