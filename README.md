@@ -1,38 +1,42 @@
 # URM Simulator
 
-Simulador visual de **URM (Unlimited Register Machine)**
+[Português (Brasil)](README.pt-BR.md)
 
-O projeto permite montar programas URM em dois formatos:
+![URM Simulator Logo](public/logo.png)
 
-- modo blocos (interface visual com drag and drop)
-- modo texto (editor Monaco com validacao de sintaxe)
+Visual **URM (Unlimited Register Machine)** simulator.
 
-Tambem inclui execucao passo a passo, execucao continua com controle de velocidade, fita de registradores e destaque da instrucao ativa.
+The project lets you build URM programs in two formats:
 
-## Visao geral
+- block mode (visual drag-and-drop interface)
+- text mode (Monaco editor with syntax validation)
 
-A URM e um modelo teorico de computacao baseado em registradores naturais e instrucoes simples. Este simulador foi criado para estudo e experimentacao de programas URM, com foco em feedback visual durante a execucao.
+It also includes step-by-step execution, continuous execution with speed control, register tape, and active instruction highlighting.
 
-## Funcionalidades
+## Overview
 
-- editor em **modo blocos** para criar e reordenar instrucoes
-- editor em **modo texto** com Monaco Editor
-- validacao de sintaxe em tempo real no modo texto
-- autocomplete para `z(n)`, `s(n)`, `t(m,n)` e `j(m,n,q)`
-- controles de execucao: executar, pausar, passo unico e reiniciar
-- ajuste de velocidade (ms por passo)
-- exibicao de `PC`, total de passos e estado da maquina
-- fita de registradores com destaque dos registradores tocados
-- limite de seguranca de passos para evitar loop infinito (`MAX_STEPS = 800`)
+URM is a theoretical computation model based on natural-number registers and simple instructions. This simulator was created for learning and experimentation, with a focus on visual feedback during execution.
 
-## Instrucoes URM suportadas
+## Features
 
-- `Z(n)`: zera o registrador `R_n`
-- `S(n)`: incrementa `R_n`
-- `T(m,n)`: copia o valor de `R_m` para `R_n`
-- `J(m,n,q)`: se `R_m = R_n`, salta para a linha `q`
+- **block mode** editor to create and reorder instructions
+- **text mode** editor with Monaco Editor
+- real-time syntax validation in text mode
+- autocomplete for `z(n)`, `s(n)`, `t(m,n)` and `j(m,n,q)`
+- execution controls: run, pause, single step, and reset
+- speed adjustment (ms per step)
+- display of `PC`, total steps, and machine state
+- register tape with highlighting for touched registers
+- safety step limit to avoid infinite loops (`MAX_STEPS = 800`)
 
-No modo texto, use uma instrucao por linha, em minusculo ou maiusculo:
+## Supported URM instructions
+
+- `Z(n)`: resets register `R_n`
+- `S(n)`: increments register `R_n`
+- `T(m,n)`: copies `R_m` into `R_n`
+- `J(m,n,q)`: if `R_m = R_n`, jumps to line `q`
+
+In text mode, use one instruction per line (lowercase or uppercase):
 
 ```txt
 z(0)
@@ -40,3 +44,17 @@ s(0)
 t(0,1)
 j(1,2,6)
 ```
+
+## Contributing
+
+Contributions are welcome.
+
+1. Fork the repository
+2. Create a branch: `git checkout -b feat/my-change`
+3. Commit your changes: `git commit -m "feat: add my change"`
+4. Push the branch: `git push origin feat/my-change`
+5. Open a Pull Request
+
+## License
+
+This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
