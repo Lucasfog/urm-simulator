@@ -4,6 +4,7 @@ export type EditorMode = 'blocks' | 'text'
 
 export type ProgramEditorProps = {
   program: Instruction[]
+  theme: 'dark' | 'light'
   activePc: number
   halted: boolean
   isRunning: boolean

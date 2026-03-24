@@ -1,4 +1,5 @@
 import type { Op } from '../lib/urm'
+import { Moon, Sun } from 'lucide-react'
 import { toNonNegative } from '../lib/urm'
 import { Badge } from './ui/badge'
 import { Button } from './ui/button'
@@ -15,42 +16,53 @@ const blockButtons: Array<{ op: Op; label: string; description: string }> = [
 ]
 
 export function ControlSidebar(props: ControlSidebarProps) {
-  const { initialRegisters, setInitialRegisters, onLoadRegisters, onAddInstruction } = props
+  const { theme, initialRegisters, setInitialRegisters, onLoadRegisters, onAddInstruction, onToggleTheme } = props
 
   return (
     <Card className="flex h-full flex-col min-w-0 rounded-none border-0 bg-transparent shadow-none">
-      <CardHeader className="bg-[#1e1e1e]/35 pb-4 pt-6 lg:pt-8">
-        <div className="flex items-center gap-2 pl-3 lg:pl-4">
+      <CardHeader className="bg-card/40 pb-4 pt-6 lg:pt-8">
+        <div className="flex items-center justify-between gap-2 pl-3 pr-3 lg:pl-4 lg:pr-4">
           <div className="flex h-14 w-14 items-center justify-center">
             <img src="/logo.png" alt="Logo URM" className="h-full w-full object-contain" />
           </div>
           <div>
-            <CardTitle className="text-2xl font-semibold tracking-tight text-[#d4d4d4]">
+            <CardTitle className="text-2xl font-semibold tracking-tight text-foreground">
               URM Simulator
             </CardTitle>
-            <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.2em] text-[#858585]">
+            <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
               Editor visual
             </p>
           </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            onClick={onToggleTheme}
+            className="hidden rounded-full border-border/80 bg-card/90 text-foreground shadow-sm hover:bg-accent lg:inline-flex"
+            aria-label={theme === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'}
+            title={theme === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'}
+          >
+            {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+          </Button>
         </div>
       </CardHeader>
 
       <CardContent className="flex-1 overflow-y-auto space-y-6 px-4 lg:px-6 custom-scrollbar">
-        <div className="rounded-xl border border-[#3c3c3c]/70 bg-[#252526]/75 p-4 shadow-sm backdrop-blur-sm">
-          <h3 className="mb-3 text-sm font-medium text-[#d4d4d4]">
+        <div className="rounded-xl border border-border/70 bg-card/75 p-4 shadow-sm backdrop-blur-sm dark:bg-card/70">
+          <h3 className="mb-3 text-sm font-medium text-foreground">
             Registradores iniciais
           </h3>
           <div className="grid grid-cols-4 gap-2 sm:grid-cols-8 lg:grid-cols-4">
             {initialRegisters.map((value, index) => (
               <label key={`initial-${index}`} className="group grid gap-1 relative">
-                <span className="absolute -top-2 left-2 z-10 bg-[#1e1e1e] px-1 text-[10px] font-medium text-[#858585] transition-colors group-focus-within:text-[#569cd6]">
+                <span className="absolute -top-2 left-2 z-10 bg-background px-1 text-[10px] font-medium text-muted-foreground transition-colors group-focus-within:text-primary">
                   R{index}
                 </span>
                 <Input
                   type="number"
                   min={0}
                   value={value}
-                  className="h-10 border-[#3c3c3c] bg-[#1e1e1e]/80 px-2 text-center text-sm text-[#d4d4d4] shadow-inner transition-all focus:border-[#007fd4] focus:bg-[#1e1e1e] focus:ring-1 focus:ring-[#007fd4] focus-visible:ring-[#007fd4]"
+                  className="h-10 border-border bg-background/85 px-2 text-center text-sm text-foreground shadow-inner transition-all focus:border-primary focus:bg-background focus:ring-1 focus:ring-primary focus-visible:ring-primary"
                   onChange={(event) => {
                     const next = [...initialRegisters]
                     next[index] = toNonNegative(event.target.value)
@@ -63,17 +75,17 @@ export function ControlSidebar(props: ControlSidebarProps) {
 
           <Button
             variant="default"
-            className="mt-4 w-full bg-[#0e639c] font-medium text-[#f0f6fc] transition-all hover:bg-[#1177bb] hover:shadow-[0_0_12px_rgba(17,119,187,0.28)] active:scale-[0.98]"
+            className="mt-4 w-full bg-primary font-medium text-primary-foreground transition-all hover:bg-primary/90 hover:shadow-[0_0_12px_color-mix(in_oklch,var(--primary)_30%,transparent)] active:scale-[0.98]"
             onClick={onLoadRegisters}
           >
             Aplicar valores
           </Button>
         </div>
 
-        <Separator className="bg-[#3c3c3c]/65" />
+        <Separator className="bg-border/65" />
 
         <div className="space-y-3">
-          <h3 className="text-sm font-medium text-[#d4d4d4]">
+          <h3 className="text-sm font-medium text-foreground">
             Blocos de Instrução URM
           </h3>
           <div className="grid gap-2">
@@ -82,24 +94,24 @@ export function ControlSidebar(props: ControlSidebarProps) {
                 key={block.op}
                 type="button"
                 onClick={() => onAddInstruction(block.op)}
-                className="group relative flex w-full items-center gap-3 overflow-hidden rounded-xl border border-[#3c3c3c] bg-[#252526]/50 p-3 text-left transition-all hover:border-[#4b4b4b] hover:bg-[#2a2d2e]/85 hover:shadow-md hover:shadow-black/20 focus:outline-none focus:ring-2 focus:ring-[#007fd4]"
+                className="group relative flex w-full items-center gap-3 overflow-hidden rounded-xl border border-border bg-card/60 p-3 text-left transition-all hover:border-border/90 hover:bg-accent/45 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-[100%] transition-transform duration-500 group-hover:translate-x-[100%]"></div>
                 <Badge 
                   variant="secondary" 
                   className={`pointer-events-none shrink-0 font-mono text-xs font-semibold shadow-sm
-                    ${block.op === 'Z' ? 'bg-[#f14c4c]/15 text-[#f14c4c] border-[#f14c4c]/35' : ''}
-                    ${block.op === 'S' ? 'bg-[#4ec9b0]/15 text-[#4ec9b0] border-[#4ec9b0]/35' : ''}
-                    ${block.op === 'T' ? 'bg-[#569cd6]/15 text-[#569cd6] border-[#569cd6]/35' : ''}
-                    ${block.op === 'J' ? 'bg-[#c586c0]/15 text-[#c586c0] border-[#c586c0]/35' : ''}
+                    ${block.op === 'Z' ? 'bg-[#f14c4c]/12 text-[#a61b1b] border-[#f14c4c]/35 dark:bg-[#f14c4c]/15 dark:text-[#f14c4c]' : ''}
+                    ${block.op === 'S' ? 'bg-[#4ec9b0]/12 text-[#0f766e] border-[#4ec9b0]/35 dark:bg-[#4ec9b0]/15 dark:text-[#4ec9b0]' : ''}
+                    ${block.op === 'T' ? 'bg-[#569cd6]/12 text-[#1d4ed8] border-[#569cd6]/35 dark:bg-[#569cd6]/15 dark:text-[#569cd6]' : ''}
+                    ${block.op === 'J' ? 'bg-[#c586c0]/12 text-[#7e22ce] border-[#c586c0]/35 dark:bg-[#c586c0]/15 dark:text-[#c586c0]' : ''}
                   `}
                 >
                   {block.label}
                 </Badge>
-                <span className="text-xs font-medium text-[#9b9b9b] transition-colors group-hover:text-[#cccccc]">
+                <span className="text-xs font-medium text-muted-foreground transition-colors group-hover:text-foreground">
                   {block.description}
                 </span>
-                <span className="ml-auto translate-x-2 transform text-[#7f7f7f] opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100">
+                <span className="ml-auto translate-x-2 transform text-muted-foreground opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100">
                   +
                 </span>
               </button>
@@ -108,13 +120,13 @@ export function ControlSidebar(props: ControlSidebarProps) {
         </div>
 
         <div className="pt-6 pb-2 sm:pt-8 opacity-60 transition-opacity hover:opacity-100">
-          <p className="text-center text-[10px] uppercase tracking-wider text-[#858585]">
+          <p className="text-center text-[10px] uppercase tracking-wider text-muted-foreground">
             Desenvolvido por{' '}
             <a
               href="https://github.com/lucasfog"
               target="_blank"
               rel="noreferrer"
-              className="font-semibold text-[#9b9b9b] underline decoration-[#3c3c3c] underline-offset-2 transition-colors hover:text-[#d4d4d4]"
+              className="font-semibold text-muted-foreground underline decoration-border underline-offset-2 transition-colors hover:text-foreground"
             >
               Lucas Fogaça
             </a>

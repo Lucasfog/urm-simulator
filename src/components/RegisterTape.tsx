@@ -2,7 +2,7 @@ import type { RegisterTapeProps } from './types/register-tape.types'
 
 export function RegisterTape({ values, touchedRegisters, isRunning, stepCount }: RegisterTapeProps) {
   return (
-    <div className="relative overflow-hidden rounded-[14px] border border-[#3c3c3c]/80 bg-[#252526]/80 px-3 py-4 shadow-inner sm:px-4 sm:py-5">
+    <div className="relative overflow-hidden rounded-[14px] border border-border/80 bg-card/80 px-3 py-4 shadow-inner dark:bg-card/70 sm:px-4 sm:py-5">
       <div className="pointer-events-none absolute inset-0 overflow-hidden z-10">
         {isRunning && <div className="tape-scan h-full w-36 bg-gradient-to-r from-transparent via-[#0e639c]/20 to-transparent" />}
       </div>
@@ -17,14 +17,14 @@ export function RegisterTape({ values, touchedRegisters, isRunning, stepCount }:
                 className={`group grid min-h-[64px] content-center justify-items-center rounded-lg border px-1 py-1 transition-all duration-300 relative overflow-hidden ${
                   touched 
                     ? 'border-[#4ec9b0]/50 bg-[#4ec9b0]/10 tape-cell-active shadow-[0_0_10px_rgba(78,201,176,0.18)]' 
-                    : 'border-[#3c3c3c] bg-[#1e1e1e]/70 hover:border-[#5a5a5a] hover:bg-[#252526]'
+                    : 'border-border bg-background/80 hover:border-border/90 hover:bg-accent/45'
                 }`}
               >
                 {touched && <div className="absolute inset-0 rotate-45 scale-150 transform bg-[#4ec9b0]/10"></div>}
-                <span className={`relative z-10 mb-0.5 font-mono text-[10px] tracking-wider sm:text-xs ${touched ? 'font-semibold text-[#4ec9b0]' : 'text-[#858585]'}`}>
+                <span className={`relative z-10 mb-0.5 font-mono text-[10px] tracking-wider sm:text-xs ${touched ? 'font-semibold text-[#4ec9b0]' : 'text-muted-foreground'}`}>
                   R{index}
                 </span>
-                <strong className={`relative z-10 font-mono text-base sm:text-lg ${touched ? 'text-[#d9fff5]' : 'text-[#d4d4d4]'}`}>
+                <strong className={`relative z-10 font-mono text-base sm:text-lg ${touched ? 'text-[#065f46] dark:text-[#d9fff5]' : 'text-foreground'}`}>
                   {value}
                 </strong>
               </div>

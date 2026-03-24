@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Moon, Sun } from 'lucide-react'
 import { ControlSidebar } from './components/ControlSidebar'
 import { MachinePanel } from './components/MachinePanel'
 import { ProgramEditor } from './components/ProgramEditor'
+import { Button } from './components/ui/button'
 import {
   buildInstruction,
   createDemoProgram,
@@ -15,7 +17,14 @@ import {
   type Op,
 } from './lib/urm'
 
+type Theme = 'dark' | 'light'
+
 function App() {
+  const [theme, setTheme] = useState<Theme>(() => {
+    const savedTheme = window.localStorage.getItem('urm-theme')
+    return savedTheme === 'light' ? 'light' : 'dark'
+  })
+
   const [program, setProgram] = useState<Instruction[]>(() => createDemoProgram())
   const [editorMode, setEditorMode] = useState<'blocks' | 'text'>('blocks')
   const [programText, setProgramText] = useState<string>(() => serializeProgram(createDemoProgram()))
@@ -186,6 +195,12 @@ function App() {
   }
 
   useEffect(() => {
+    const root = window.document.documentElement
+    root.classList.toggle('dark', theme === 'dark')
+    window.localStorage.setItem('urm-theme', theme)
+  }, [theme])
+
+  useEffect(() => {
     if (!isRunning || machine.halted) {
       return
     }
@@ -200,22 +215,38 @@ function App() {
   }, [isRunning, machine.halted, machine.steps, speedMs, stepMachine])
 
   return (
-    <main className="min-h-screen overflow-x-hidden bg-[#1e1e1e] text-[#cccccc] selection:bg-[#264f78]/70">
-      <div className="fixed inset-0 z-[-1] bg-[radial-gradient(ellipse_88%_70%_at_50%_-22%,rgba(14,99,156,0.25),rgba(30,30,30,0))]"></div>
+    <main className="min-h-screen overflow-x-hidden bg-background text-foreground selection:bg-primary/30">
+      <div className="fixed inset-0 z-[-1] bg-[radial-gradient(circle_at_75%_0%,rgba(14,99,156,0.12),transparent_35%),radial-gradient(circle_at_10%_100%,rgba(14,99,156,0.08),transparent_45%)] dark:bg-[radial-gradient(ellipse_88%_70%_at_50%_-22%,rgba(14,99,156,0.25),rgba(30,30,30,0))]"></div>
       <div className="mx-auto w-full max-w-[1536px]">
+        <div className="pointer-events-none fixed right-4 top-4 z-50 lg:hidden">
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            onClick={() => setTheme((current) => (current === 'dark' ? 'light' : 'dark'))}
+            className="pointer-events-auto rounded-full border-border/80 bg-card/90 text-foreground shadow-lg backdrop-blur hover:bg-accent"
+            aria-label={theme === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'}
+            title={theme === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'}
+          >
+            {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+          </Button>
+        </div>
         <section className="flex min-h-screen flex-col lg:flex-row">
-          <div className="z-10 w-full bg-[rgba(30,30,30,0.62)] backdrop-blur-xl lg:w-[320px] lg:shrink-0 lg:border-r lg:border-[#3c3c3c]/70">
+          <div className="z-10 w-full bg-card/70 backdrop-blur-xl lg:w-[320px] lg:shrink-0 lg:border-r lg:border-border/70">
             <ControlSidebar
+              theme={theme}
               initialRegisters={initialRegisters}
               setInitialRegisters={setInitialRegisters}
               onLoadRegisters={loadRegistersIntoMachine}
               onAddInstruction={addInstruction}
+              onToggleTheme={() => setTheme((current) => (current === 'dark' ? 'light' : 'dark'))}
             />
           </div>
 
           <div className="flex-1 grid min-w-0 gap-4 p-4 lg:p-6 xl:gap-8 lg:grid-cols-2">
             <ProgramEditor
               program={program}
+              theme={theme}
               activePc={machine.pc}
               halted={machine.halted}
               isRunning={isRunning}
