@@ -2,7 +2,7 @@
 
 [English](README.md)
 
-![Logo do URM Simulator](public/logo.png)
+<img src="public/logo.png" alt="Logo do URM Simulator" width="110" />
 
 Simulador visual de **URM (Unlimited Register Machine)**.
 
