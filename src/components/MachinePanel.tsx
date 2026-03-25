@@ -7,6 +7,7 @@ import type { MachinePanelProps } from './types/machine-panel.types'
 
 export function MachinePanel(props: MachinePanelProps) {
   const {
+    language,
     machine,
     isRunning,
     speedMs,
@@ -20,6 +21,8 @@ export function MachinePanel(props: MachinePanelProps) {
     onReset,
   } = props
 
+  const isPtBr = language === 'pt-BR'
+
   return (
     <Card className="flex h-fit min-w-0 flex-col rounded-2xl border border-border bg-card/80 backdrop-blur-md shadow-xl dark:bg-card/70 lg:h-full">
       <CardHeader className="pb-4 pt-5 px-5">
@@ -28,14 +31,16 @@ export function MachinePanel(props: MachinePanelProps) {
             <div className="rounded-lg bg-background/90 p-2">
               <Terminal size={20} className="text-[#4ec9b0]" />
             </div>
-            <CardTitle className="text-xl font-semibold tracking-tight text-foreground">Execução</CardTitle>
+            <CardTitle className="text-xl font-semibold tracking-tight text-foreground">
+              {isPtBr ? 'Execucao' : 'Execution'}
+            </CardTitle>
           </div>
           <Badge 
             variant={machine.halted ? 'secondary' : 'default'} 
             className={`shadow-inner px-3 py-1 text-xs border-none
               ${machine.halted ? 'bg-muted text-muted-foreground' : isRunning ? 'border border-[#4ec9b0]/35 bg-[#4ec9b0]/18 text-[#4ec9b0]' : 'bg-primary/15 text-primary'}`}
           >
-            {machine.halted ? 'Parado' : isRunning ? 'Executando' : 'Pronto'}
+            {machine.halted ? (isPtBr ? 'Parado' : 'Stopped') : isRunning ? (isPtBr ? 'Executando' : 'Running') : isPtBr ? 'Pronto' : 'Ready'}
             {isRunning && <span className="ml-2 h-1.5 w-1.5 animate-pulse rounded-full bg-[#4ec9b0]"></span>}
           </Badge>
         </div>
@@ -50,7 +55,7 @@ export function MachinePanel(props: MachinePanelProps) {
             disabled={isRunning}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 fill-current"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-            Executar
+            {isPtBr ? 'Executar' : 'Run'}
           </Button>
           <Button 
             type="button" 
@@ -60,7 +65,7 @@ export function MachinePanel(props: MachinePanelProps) {
             disabled={!isRunning}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 fill-current"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
-            Pausar
+            {isPtBr ? 'Pausar' : 'Pause'}
           </Button>
           <Button 
             type="button" 
@@ -70,20 +75,20 @@ export function MachinePanel(props: MachinePanelProps) {
             disabled={isRunning || machine.halted || programLength === 0}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2"><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line></svg>
-            Passo
+            {isPtBr ? 'Passo' : 'Step'}
           </Button>
         </div>
 
         <div className="flex gap-2 justify-end mt-2">
            <Button type="button" variant="ghost" size="sm" className="text-muted-foreground hover:bg-muted hover:text-foreground" onClick={onReset}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
-            Reiniciar
+            {isPtBr ? 'Reiniciar' : 'Reset'}
           </Button>
         </div>
 
         <div className="rounded-xl border border-border/70 bg-background/75 p-4 shadow-inner dark:bg-background/65">
           <label className="mb-3 flex items-center justify-between text-sm font-medium text-foreground/85">
-            Velocidade
+            {isPtBr ? 'Velocidade' : 'Speed'}
             <span className="rounded bg-muted px-2 py-1 font-mono text-xs text-muted-foreground">{speedMs}ms</span>
           </label>
           <input
@@ -103,12 +108,12 @@ export function MachinePanel(props: MachinePanelProps) {
             </div>
             <div className="h-6 w-[1px] bg-border"></div>
             <div className="flex flex-col items-center flex-1">
-              <span className="text-[10px] uppercase tracking-wider opacity-60">Passos</span>
+              <span className="text-[10px] uppercase tracking-wider opacity-60">{isPtBr ? 'Passos' : 'Steps'}</span>
               <span className="mt-1 font-mono text-foreground">{machine.steps}</span>
             </div>
             <div className="h-6 w-[1px] bg-border"></div>
             <div className="flex flex-col items-center flex-1">
-              <span className="text-[10px] uppercase tracking-wider opacity-60">Máx</span>
+              <span className="text-[10px] uppercase tracking-wider opacity-60">{isPtBr ? 'Max' : 'Max'}</span>
               <span className="mt-1 font-mono text-foreground">{programLength}</span>
             </div>
           </div>
@@ -126,7 +131,9 @@ export function MachinePanel(props: MachinePanelProps) {
              <div className="rounded-md bg-background/90 p-1.5">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#dcdcaa]"><rect x="2" y="6" width="20" height="12" rx="2"></rect><path d="M6 12h.01M10 12h.01M14 12h.01M18 12h.01"></path></svg>
             </div>
-            <h3 className="text-xs font-semibold uppercase tracking-[0.16em] text-foreground/85">Fita de registradores</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-[0.16em] text-foreground/85">
+              {isPtBr ? 'Fita de registradores' : 'Register tape'}
+            </h3>
           </div>
           <RegisterTape values={visibleRegisters} touchedRegisters={machine.lastTouched} isRunning={isRunning} stepCount={stepCount} />
         </div>

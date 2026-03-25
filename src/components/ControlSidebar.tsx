@@ -1,5 +1,6 @@
 import type { Op } from '../lib/urm'
-import { Moon, Sun } from 'lucide-react'
+import { Github, Moon, Sun } from 'lucide-react'
+import type { Language } from '../lib/i18n'
 import { toNonNegative } from '../lib/urm'
 import { Badge } from './ui/badge'
 import { Button } from './ui/button'
@@ -8,15 +9,35 @@ import { Input } from './ui/input'
 import { Separator } from './ui/separator'
 import type { ControlSidebarProps } from './types/control-sidebar.types'
 
-const blockButtons: Array<{ op: Op; label: string; description: string }> = [
-  { op: 'Z', label: 'Z(n)', description: 'Zera registrador' },
-  { op: 'S', label: 'S(n)', description: 'Incrementa registrador' },
-  { op: 'T', label: 'T(m,n)', description: 'Transfere valor' },
-  { op: 'J', label: 'J(m,n,q)', description: 'Salto condicional' },
-]
+const blockButtonsByLanguage: Record<Language, Array<{ op: Op; label: string; description: string }>> = {
+  'pt-BR': [
+    { op: 'Z', label: 'Z(n)', description: 'Zera registrador' },
+    { op: 'S', label: 'S(n)', description: 'Incrementa registrador' },
+    { op: 'T', label: 'T(m,n)', description: 'Transfere valor' },
+    { op: 'J', label: 'J(m,n,q)', description: 'Salto condicional' },
+  ],
+  en: [
+    { op: 'Z', label: 'Z(n)', description: 'Clear register' },
+    { op: 'S', label: 'S(n)', description: 'Increment register' },
+    { op: 'T', label: 'T(m,n)', description: 'Transfer value' },
+    { op: 'J', label: 'J(m,n,q)', description: 'Conditional jump' },
+  ],
+}
 
 export function ControlSidebar(props: ControlSidebarProps) {
-  const { theme, initialRegisters, setInitialRegisters, onLoadRegisters, onAddInstruction, onToggleTheme } = props
+  const {
+    theme,
+    language,
+    initialRegisters,
+    setInitialRegisters,
+    onLoadRegisters,
+    onAddInstruction,
+    onToggleTheme,
+    onLanguageChange,
+  } = props
+
+  const isPtBr = language === 'pt-BR'
+  const blockButtons = blockButtonsByLanguage[language]
 
   return (
     <Card className="flex h-full flex-col min-w-0 rounded-none border-0 bg-transparent shadow-none">
@@ -30,27 +51,86 @@ export function ControlSidebar(props: ControlSidebarProps) {
               URM Simulator
             </CardTitle>
             <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
-              Editor visual
+              {isPtBr ? 'Editor visual' : 'Visual editor'}
             </p>
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            onClick={onToggleTheme}
-            className="hidden rounded-full border-border/80 bg-card/90 text-foreground shadow-sm hover:bg-accent lg:inline-flex"
-            aria-label={theme === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'}
-            title={theme === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'}
-          >
-            {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
-          </Button>
+          <div className="hidden items-center gap-2 lg:flex">
+            <Button
+              asChild
+              type="button"
+              variant="outline"
+              size="icon"
+              className="rounded-full border-border/80 bg-card/90 text-foreground shadow-sm hover:bg-accent"
+            >
+              <a
+                href="https://github.com/Lucasfog/urm-simulator"
+                target="_blank"
+                rel="noreferrer"
+                aria-label={isPtBr ? 'Abrir repositorio no GitHub' : 'Open repository on GitHub'}
+                title={isPtBr ? 'Abrir repositorio no GitHub' : 'Open repository on GitHub'}
+              >
+                <Github size={16} />
+              </a>
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={onToggleTheme}
+              className="rounded-full border-border/80 bg-card/90 text-foreground shadow-sm hover:bg-accent"
+              aria-label={
+                theme === 'dark'
+                  ? isPtBr
+                    ? 'Ativar tema claro'
+                    : 'Switch to light theme'
+                  : isPtBr
+                    ? 'Ativar tema escuro'
+                    : 'Switch to dark theme'
+              }
+              title={
+                theme === 'dark'
+                  ? isPtBr
+                    ? 'Ativar tema claro'
+                    : 'Switch to light theme'
+                  : isPtBr
+                    ? 'Ativar tema escuro'
+                    : 'Switch to dark theme'
+              }
+            >
+              {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+            </Button>
+          </div>
         </div>
       </CardHeader>
 
       <CardContent className="flex-1 overflow-y-auto space-y-6 px-4 lg:px-6 custom-scrollbar">
         <div className="rounded-xl border border-border/70 bg-card/75 p-4 shadow-sm backdrop-blur-sm dark:bg-card/70">
+          <h3 className="mb-3 text-sm font-medium text-foreground">{isPtBr ? 'Idioma' : 'Language'}</h3>
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              type="button"
+              variant={language === 'pt-BR' ? 'default' : 'outline'}
+              onClick={() => onLanguageChange('pt-BR')}
+              className="h-10 justify-center gap-2"
+            >
+              <span aria-hidden="true">🇧🇷</span>
+              <span className="text-xs font-semibold">PT-BR</span>
+            </Button>
+            <Button
+              type="button"
+              variant={language === 'en' ? 'default' : 'outline'}
+              onClick={() => onLanguageChange('en')}
+              className="h-10 justify-center gap-2"
+            >
+              <span aria-hidden="true">🇺🇸</span>
+              <span className="text-xs font-semibold">EN</span>
+            </Button>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-border/70 bg-card/75 p-4 shadow-sm backdrop-blur-sm dark:bg-card/70">
           <h3 className="mb-3 text-sm font-medium text-foreground">
-            Registradores iniciais
+            {isPtBr ? 'Registradores iniciais' : 'Initial registers'}
           </h3>
           <div className="grid grid-cols-4 gap-2 sm:grid-cols-8 lg:grid-cols-4">
             {initialRegisters.map((value, index) => (
@@ -78,7 +158,7 @@ export function ControlSidebar(props: ControlSidebarProps) {
             className="mt-4 w-full bg-primary font-medium text-primary-foreground transition-all hover:bg-primary/90 hover:shadow-[0_0_12px_color-mix(in_oklch,var(--primary)_30%,transparent)] active:scale-[0.98]"
             onClick={onLoadRegisters}
           >
-            Aplicar valores
+            {isPtBr ? 'Aplicar valores' : 'Apply values'}
           </Button>
         </div>
 
@@ -86,7 +166,7 @@ export function ControlSidebar(props: ControlSidebarProps) {
 
         <div className="space-y-3">
           <h3 className="text-sm font-medium text-foreground">
-            Blocos de Instrução URM
+            {isPtBr ? 'Blocos de Instrucao URM' : 'URM Instruction Blocks'}
           </h3>
           <div className="grid gap-2">
             {blockButtons.map((block) => (
@@ -121,7 +201,7 @@ export function ControlSidebar(props: ControlSidebarProps) {
 
         <div className="pt-6 pb-2 sm:pt-8 opacity-60 transition-opacity hover:opacity-100">
           <p className="text-center text-[10px] uppercase tracking-wider text-muted-foreground">
-            Desenvolvido por{' '}
+            {isPtBr ? 'Desenvolvido por' : 'Developed by'}{' '}
             <a
               href="https://github.com/lucasfog"
               target="_blank"

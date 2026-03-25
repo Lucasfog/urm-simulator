@@ -1,8 +1,10 @@
 import type { Instruction, Op } from '../../lib/urm'
+import type { Language } from '../../lib/i18n'
 
 export type EditorMode = 'blocks' | 'text'
 
 export type ProgramEditorProps = {
+  language: Language
   program: Instruction[]
   theme: 'dark' | 'light'
   activePc: number

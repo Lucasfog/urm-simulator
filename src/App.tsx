@@ -16,8 +16,24 @@ import {
   type MachineState,
   type Op,
 } from './lib/urm'
+import { DEFAULT_LANGUAGE, type Language } from './lib/i18n'
 
 type Theme = 'dark' | 'light'
+
+const COPY = {
+  initialPrompt: {
+    'pt-BR': 'Configure o programa e pressione executar.',
+    en: 'Set up the program and press Run.',
+  },
+  emptyProgram: {
+    'pt-BR': 'Programa vazio: informe pelo menos uma instrucao.',
+    en: 'Empty program: provide at least one instruction.',
+  },
+  addInstruction: {
+    'pt-BR': 'Adicione ao menos uma instrucao para executar.',
+    en: 'Add at least one instruction to run.',
+  },
+} as const
 
 function App() {
   const [theme, setTheme] = useState<Theme>(() => {
@@ -25,13 +41,19 @@ function App() {
     return savedTheme === 'light' ? 'light' : 'dark'
   })
 
+  const [language, setLanguage] = useState<Language>(() => {
+    const savedLanguage = window.localStorage.getItem('urm-language')
+    return savedLanguage === 'en' ? 'en' : DEFAULT_LANGUAGE
+  })
+  const isPtBr = language === 'pt-BR'
+
   const [program, setProgram] = useState<Instruction[]>(() => createDemoProgram())
   const [editorMode, setEditorMode] = useState<'blocks' | 'text'>('blocks')
   const [programText, setProgramText] = useState<string>(() => serializeProgram(createDemoProgram()))
   const [syntaxErrors, setSyntaxErrors] = useState<string[]>([])
 
   const [initialRegisters, setInitialRegisters] = useState<number[]>([0, 4, 0, 0, 0, 0, 0, 0])
-  const [machine, setMachine] = useState<MachineState>(() => createInitialMachine(initialRegisters))
+  const [machine, setMachine] = useState<MachineState>(() => createInitialMachine(initialRegisters, language))
 
   const [isRunning, setIsRunning] = useState(false)
   const [speedMs, setSpeedMs] = useState(420)
@@ -117,18 +139,18 @@ function App() {
 
   const stepMachine = useCallback(() => {
     setMachine((current) => {
-      const next = executeStep(current, program)
+      const next = executeStep(current, program, language)
       if (next.halted) {
         setIsRunning(false)
       }
       return next
     })
-  }, [program])
+  }, [program, language])
 
   const applyTextProgram = () => {
-    const parsed = parseProgramText(programText)
+    const parsed = parseProgramText(programText, language)
     if (parsed.program.length === 0 && parsed.errors.length === 0) {
-      setSyntaxErrors(['Programa vazio: informe pelo menos uma instrucao.'])
+      setSyntaxErrors([COPY.emptyProgram[language]])
       setIsRunning(false)
       return
     }
@@ -140,7 +162,7 @@ function App() {
     }
 
     setProgram(parsed.program)
-    setMachine(createInitialMachine(initialRegisters))
+    setMachine(createInitialMachine(initialRegisters, language))
     setIsRunning(false)
   }
 
@@ -150,20 +172,20 @@ function App() {
   }
 
   const loadRegistersIntoMachine = () => {
-    setMachine(createInitialMachine(initialRegisters))
+    setMachine(createInitialMachine(initialRegisters, language))
     setIsRunning(false)
   }
 
   const resetMachine = () => {
     setIsRunning(false)
-    setMachine(createInitialMachine(initialRegisters))
+    setMachine(createInitialMachine(initialRegisters, language))
   }
 
   const runMachine = () => {
     if (editorMode === 'text') {
-      const parsed = parseProgramText(programText)
+      const parsed = parseProgramText(programText, language)
       if (parsed.program.length === 0 && parsed.errors.length === 0) {
-        setSyntaxErrors(['Programa vazio: informe pelo menos uma instrucao.'])
+        setSyntaxErrors([COPY.emptyProgram[language]])
         setIsRunning(false)
         return
       }
@@ -174,7 +196,7 @@ function App() {
         return
       }
       setProgram(parsed.program)
-      setMachine(createInitialMachine(initialRegisters))
+      setMachine(createInitialMachine(initialRegisters, language))
       setIsRunning(true)
       return
     }
@@ -182,13 +204,13 @@ function App() {
     if (program.length === 0) {
       setMachine((current) => ({
         ...current,
-        message: 'Adicione ao menos uma instrucao para executar.',
+        message: COPY.addInstruction[language],
       }))
       return
     }
 
     if (machine.halted) {
-      setMachine(createInitialMachine(initialRegisters))
+      setMachine(createInitialMachine(initialRegisters, language))
     }
 
     setIsRunning(true)
@@ -199,6 +221,31 @@ function App() {
     root.classList.toggle('dark', theme === 'dark')
     window.localStorage.setItem('urm-theme', theme)
   }, [theme])
+
+  useEffect(() => {
+    window.localStorage.setItem('urm-language', language)
+  }, [language])
+
+  useEffect(() => {
+    setMachine((current) => {
+      const isInitialPrompt =
+        current.message === COPY.initialPrompt['pt-BR'] || current.message === COPY.initialPrompt.en
+
+      if (!isInitialPrompt) {
+        return current
+      }
+
+      const nextMessage = COPY.initialPrompt[language]
+      if (current.message === nextMessage) {
+        return current
+      }
+
+      return {
+        ...current,
+        message: nextMessage,
+      }
+    })
+  }, [language])
 
   useEffect(() => {
     if (!isRunning || machine.halted) {
@@ -225,8 +272,24 @@ function App() {
             size="icon"
             onClick={() => setTheme((current) => (current === 'dark' ? 'light' : 'dark'))}
             className="pointer-events-auto rounded-full border-border/80 bg-card/90 text-foreground shadow-lg backdrop-blur hover:bg-accent"
-            aria-label={theme === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'}
-            title={theme === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'}
+            aria-label={
+              theme === 'dark'
+                ? isPtBr
+                  ? 'Ativar tema claro'
+                  : 'Switch to light theme'
+                : isPtBr
+                  ? 'Ativar tema escuro'
+                  : 'Switch to dark theme'
+            }
+            title={
+              theme === 'dark'
+                ? isPtBr
+                  ? 'Ativar tema claro'
+                  : 'Switch to light theme'
+                : isPtBr
+                  ? 'Ativar tema escuro'
+                  : 'Switch to dark theme'
+            }
           >
             {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
           </Button>
@@ -235,16 +298,19 @@ function App() {
           <div className="z-10 w-full bg-card/70 backdrop-blur-xl lg:w-[320px] lg:shrink-0 lg:border-r lg:border-border/70">
             <ControlSidebar
               theme={theme}
+              language={language}
               initialRegisters={initialRegisters}
               setInitialRegisters={setInitialRegisters}
               onLoadRegisters={loadRegistersIntoMachine}
               onAddInstruction={addInstruction}
               onToggleTheme={() => setTheme((current) => (current === 'dark' ? 'light' : 'dark'))}
+              onLanguageChange={setLanguage}
             />
           </div>
 
           <div className="flex-1 grid min-w-0 gap-4 p-4 lg:p-6 xl:gap-8 lg:grid-cols-2">
             <ProgramEditor
+              language={language}
               program={program}
               theme={theme}
               activePc={machine.pc}
@@ -270,6 +336,7 @@ function App() {
             />
 
             <MachinePanel
+              language={language}
               machine={machine}
               isRunning={isRunning}
               speedMs={speedMs}

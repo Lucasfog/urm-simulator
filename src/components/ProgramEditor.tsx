@@ -14,6 +14,7 @@ import type { EditorMode, ProgramEditorProps } from './types/program-editor.type
 
 export function ProgramEditor(props: ProgramEditorProps) {
   const {
+    language,
     program,
     theme,
     activePc,
@@ -31,6 +32,8 @@ export function ProgramEditor(props: ProgramEditorProps) {
     onMoveInstruction,
     onInsertInstructionAt,
   } = props
+
+  const isPtBr = language === 'pt-BR'
 
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null)
@@ -143,7 +146,7 @@ export function ProgramEditor(props: ProgramEditorProps) {
             <CardTitle className="text-xl font-semibold tracking-tight text-foreground">Programa</CardTitle>
           </div>
           <Badge className="border-none bg-muted px-3 py-1 text-xs text-muted-foreground shadow-inner hover:bg-muted/80">
-            {program.length} linhas
+            {program.length} {isPtBr ? 'linhas' : 'lines'}
           </Badge>
         </div>
       </CardHeader>
@@ -155,13 +158,13 @@ export function ProgramEditor(props: ProgramEditorProps) {
               value="blocks"
               className="flex-1 !h-full min-w-0 rounded-lg px-5 text-sm font-semibold leading-none text-muted-foreground after:hidden hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
             >
-              Modo Blocos
+              {isPtBr ? 'Modo Blocos' : 'Blocks Mode'}
             </TabsTrigger>
             <TabsTrigger
               value="text"
               className="flex-1 !h-full min-w-0 rounded-lg px-5 text-sm font-semibold leading-none text-muted-foreground after:hidden hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
             >
-              Modo Texto
+              {isPtBr ? 'Modo Texto' : 'Text Mode'}
             </TabsTrigger>
           </TabsList>
 
@@ -169,8 +172,10 @@ export function ProgramEditor(props: ProgramEditorProps) {
             {program.length === 0 && (
               <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-background/35 p-12 text-center">
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" className="mb-4 text-muted-foreground" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
-                <p className="text-sm text-foreground/85">O programa está vazio.</p>
-                <p className="mt-1 text-xs text-muted-foreground">Adicione blocos pela barra lateral.</p>
+                <p className="text-sm text-foreground/85">{isPtBr ? 'O programa esta vazio.' : 'The program is empty.'}</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {isPtBr ? 'Adicione blocos pela barra lateral.' : 'Add blocks from the sidebar.'}
+                </p>
               </div>
             )}
             {program.map((instruction, index) => {
@@ -302,7 +307,7 @@ export function ProgramEditor(props: ProgramEditorProps) {
                     
                     <div className="flex items-center gap-3 sm:ml-auto w-full sm:w-auto h-full justify-between">
                        <small className="hidden max-w-[120px] text-[11px] italic leading-tight text-muted-foreground md:block sm:text-right">
-                        {instructionHint(instruction)}
+                        {instructionHint(instruction, language)}
                        </small>
                        <Button
                         type="button"
@@ -327,7 +332,11 @@ export function ProgramEditor(props: ProgramEditorProps) {
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-[#569cd6]">
                 <circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path>
               </svg>
-              <p className="text-[13px]">Digite uma instrução por linha. Exemplo: <code className="rounded bg-background px-1 py-0.5 text-foreground">z(0)</code> e <code className="rounded bg-background px-1 py-0.5 text-foreground">j(1,2,6)</code>.</p>
+              <p className="text-[13px]">
+                {isPtBr ? 'Digite uma instrucao por linha.' : 'Type one instruction per line.'} {isPtBr ? 'Exemplo:' : 'Example:'}{' '}
+                <code className="rounded bg-background px-1 py-0.5 text-foreground">z(0)</code> {isPtBr ? 'e' : 'and'}{' '}
+                <code className="rounded bg-background px-1 py-0.5 text-foreground">j(1,2,6)</code>.
+              </p>
             </div>
             <div className="flex-1 min-h-[320px] overflow-hidden rounded-xl border border-border/70 bg-background/80 shadow-inner sm:min-h-[420px]">
               <Editor
@@ -356,11 +365,11 @@ export function ProgramEditor(props: ProgramEditorProps) {
             <div className="grid gap-3 sm:grid-cols-2 mt-auto pt-2">
               <Button type="button" size="lg" className="bg-primary text-primary-foreground shadow-md shadow-primary/30 transition-all hover:bg-primary/90 active:scale-[0.98]" onClick={onApplyTextProgram}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-                Validar e aplicar
+                {isPtBr ? 'Validar e aplicar' : 'Validate and apply'}
               </Button>
               <Button type="button" size="lg" variant="outline" className="border-border bg-card/70 text-muted-foreground transition-all hover:bg-muted hover:text-foreground active:scale-[0.98]" onClick={onLoadTextFromBlocks}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.59-9.21l-5.41 5.41"></path></svg>
-                Sincronizar com blocos
+                {isPtBr ? 'Sincronizar com blocos' : 'Sync from blocks'}
               </Button>
             </div>
 

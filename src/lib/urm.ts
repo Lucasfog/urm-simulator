@@ -1,4 +1,5 @@
 import type { Instruction, MachineState, Op, ParseResult } from './types/urm.types'
+import type { Language } from './i18n'
 
 export type { Instruction, MachineState, Op, ParseResult }
 
@@ -62,10 +63,11 @@ export function serializeProgram(program: Instruction[]): string {
     .join('\n')
 }
 
-export function parseProgramText(input: string): ParseResult {
+export function parseProgramText(input: string, language: Language = 'pt-BR'): ParseResult {
   const lines = input.split('\n')
   const parsed: Instruction[] = []
   const errors: string[] = []
+  const isPtBr = language === 'pt-BR'
 
   lines.forEach((rawLine, index) => {
     const line = rawLine.trim()
@@ -75,7 +77,11 @@ export function parseProgramText(input: string): ParseResult {
 
     const match = line.match(/^([zstj])\s*\((.*)\)$/i)
     if (!match) {
-      errors.push(`Linha ${index + 1}: formato invalido. Use z(0), s(1), t(1,2) ou j(1,2,6).`)
+      errors.push(
+        isPtBr
+          ? `Linha ${index + 1}: formato invalido. Use z(0), s(1), t(1,2) ou j(1,2,6).`
+          : `Line ${index + 1}: invalid format. Use z(0), s(1), t(1,2), or j(1,2,6).`
+      )
       return
     }
 
@@ -87,18 +93,30 @@ export function parseProgramText(input: string): ParseResult {
 
     const expected = op === 'J' ? 3 : op === 'T' ? 2 : 1
     if (args.length !== expected) {
-      errors.push(`Linha ${index + 1}: ${op} espera ${expected} argumento(s).`)
+      errors.push(
+        isPtBr
+          ? `Linha ${index + 1}: ${op} espera ${expected} argumento(s).`
+          : `Line ${index + 1}: ${op} expects ${expected} argument(s).`
+      )
       return
     }
 
     const values = args.map((arg) => Number(arg))
     if (values.some((value) => !Number.isInteger(value) || value < 0)) {
-      errors.push(`Linha ${index + 1}: argumentos devem ser inteiros nao negativos.`)
+      errors.push(
+        isPtBr
+          ? `Linha ${index + 1}: argumentos devem ser inteiros nao negativos.`
+          : `Line ${index + 1}: arguments must be non-negative integers.`
+      )
       return
     }
 
     if (op === 'J' && values[2] < 1) {
-      errors.push(`Linha ${index + 1}: o destino q de J deve ser >= 1.`)
+      errors.push(
+        isPtBr
+          ? `Linha ${index + 1}: o destino q de J deve ser >= 1.`
+          : `Line ${index + 1}: J destination q must be >= 1.`
+      )
       return
     }
 
@@ -114,7 +132,7 @@ export function parseProgramText(input: string): ParseResult {
   return { program: parsed, errors }
 }
 
-export function createInitialMachine(initialRegisters: number[]): MachineState {
+export function createInitialMachine(initialRegisters: number[], language: Language = 'pt-BR'): MachineState {
   const normalized = initialRegisters.map((value) => toNonNegative(value)).slice(0, 64)
   while (normalized.length < 8) {
     normalized.push(0)
@@ -125,12 +143,16 @@ export function createInitialMachine(initialRegisters: number[]): MachineState {
     pc: 0,
     halted: false,
     lastTouched: [],
-    message: 'Configure o programa e pressione executar.',
+    message:
+      language === 'pt-BR'
+        ? 'Configure o programa e pressione executar.'
+        : 'Set up the program and press Run.',
     steps: 0,
   }
 }
 
-export function executeStep(state: MachineState, program: Instruction[]): MachineState {
+export function executeStep(state: MachineState, program: Instruction[], language: Language = 'pt-BR'): MachineState {
+  const isPtBr = language === 'pt-BR'
   if (state.halted) {
     return state
   }
@@ -139,7 +161,9 @@ export function executeStep(state: MachineState, program: Instruction[]): Machin
     return {
       ...state,
       halted: true,
-      message: `Parado por seguranca apos ${MAX_STEPS} passos.`,
+      message: isPtBr
+        ? `Parado por seguranca apos ${MAX_STEPS} passos.`
+        : `Stopped for safety after ${MAX_STEPS} steps.`,
       lastTouched: [],
     }
   }
@@ -148,7 +172,9 @@ export function executeStep(state: MachineState, program: Instruction[]): Machin
     return {
       ...state,
       halted: true,
-      message: 'Fim do programa: contador saiu da faixa.',
+      message: isPtBr
+        ? 'Fim do programa: contador saiu da faixa.'
+        : 'Program ended: counter went out of range.',
       lastTouched: [],
     }
   }
@@ -163,14 +189,18 @@ export function executeStep(state: MachineState, program: Instruction[]): Machin
     ensureRegister(registers, instruction.a)
     registers[instruction.a] = 0
     touched.add(instruction.a)
-    message = `L${state.pc + 1}: Z(${instruction.a}) zerou R${instruction.a}.`
+    message = isPtBr
+      ? `L${state.pc + 1}: Z(${instruction.a}) zerou R${instruction.a}.`
+      : `L${state.pc + 1}: Z(${instruction.a}) cleared R${instruction.a}.`
   }
 
   if (instruction.op === 'S') {
     ensureRegister(registers, instruction.a)
     registers[instruction.a] += 1
     touched.add(instruction.a)
-    message = `L${state.pc + 1}: S(${instruction.a}) incrementou R${instruction.a}.`
+    message = isPtBr
+      ? `L${state.pc + 1}: S(${instruction.a}) incrementou R${instruction.a}.`
+      : `L${state.pc + 1}: S(${instruction.a}) incremented R${instruction.a}.`
   }
 
   if (instruction.op === 'T') {
@@ -178,7 +208,9 @@ export function executeStep(state: MachineState, program: Instruction[]): Machin
     registers[instruction.b] = registers[instruction.a]
     touched.add(instruction.a)
     touched.add(instruction.b)
-    message = `L${state.pc + 1}: T(${instruction.a}, ${instruction.b}) copiou R${instruction.a} para R${instruction.b}.`
+    message = isPtBr
+      ? `L${state.pc + 1}: T(${instruction.a}, ${instruction.b}) copiou R${instruction.a} para R${instruction.b}.`
+      : `L${state.pc + 1}: T(${instruction.a}, ${instruction.b}) copied R${instruction.a} to R${instruction.b}.`
   }
 
   if (instruction.op === 'J') {
@@ -193,25 +225,33 @@ export function executeStep(state: MachineState, program: Instruction[]): Machin
           pc: program.length,
           halted: true,
           lastTouched: [...touched],
-          message: `L${state.pc + 1}: J(${instruction.a}, ${instruction.b}, ${instruction.c}) encerrou a execucao.`,
+          message: isPtBr
+            ? `L${state.pc + 1}: J(${instruction.a}, ${instruction.b}, ${instruction.c}) encerrou a execucao.`
+            : `L${state.pc + 1}: J(${instruction.a}, ${instruction.b}, ${instruction.c}) finished execution.`,
           steps: state.steps + 1,
         }
       }
 
       if (instruction.c > 0 && instruction.c <= program.length) {
         nextPc = instruction.c - 1
-        message = `L${state.pc + 1}: J(${instruction.a}, ${instruction.b}, ${instruction.c}) fez salto para linha ${instruction.c}.`
+        message = isPtBr
+          ? `L${state.pc + 1}: J(${instruction.a}, ${instruction.b}, ${instruction.c}) fez salto para linha ${instruction.c}.`
+          : `L${state.pc + 1}: J(${instruction.a}, ${instruction.b}, ${instruction.c}) jumped to line ${instruction.c}.`
       } else {
         return {
           ...state,
           halted: true,
           lastTouched: [...touched],
-          message: `Linha ${state.pc + 1}: destino de salto invalido (${instruction.c}).`,
+          message: isPtBr
+            ? `Linha ${state.pc + 1}: destino de salto invalido (${instruction.c}).`
+            : `Line ${state.pc + 1}: invalid jump destination (${instruction.c}).`,
           steps: state.steps + 1,
         }
       }
     } else {
-      message = `L${state.pc + 1}: J(${instruction.a}, ${instruction.b}, ${instruction.c}) seguiu para proxima linha.`
+      message = isPtBr
+        ? `L${state.pc + 1}: J(${instruction.a}, ${instruction.b}, ${instruction.c}) seguiu para proxima linha.`
+        : `L${state.pc + 1}: J(${instruction.a}, ${instruction.b}, ${instruction.c}) continued to the next line.`
     }
   }
 
@@ -221,7 +261,7 @@ export function executeStep(state: MachineState, program: Instruction[]): Machin
       pc: nextPc,
       halted: true,
       lastTouched: [...touched],
-      message: `${message} Programa finalizado.`,
+      message: isPtBr ? `${message} Programa finalizado.` : `${message} Program finished.`,
       steps: state.steps + 1,
     }
   }
@@ -236,7 +276,8 @@ export function executeStep(state: MachineState, program: Instruction[]): Machin
   }
 }
 
-export function instructionHint(instruction: Instruction): string {
+export function instructionHint(instruction: Instruction, language: Language = 'pt-BR'): string {
+  const isPtBr = language === 'pt-BR'
   if (instruction.op === 'Z') {
     return `R${instruction.a} = 0`
   }
@@ -246,5 +287,7 @@ export function instructionHint(instruction: Instruction): string {
   if (instruction.op === 'T') {
     return `R${instruction.b} = R${instruction.a}`
   }
-  return `se R${instruction.a} = R${instruction.b}, salta para L${instruction.c}`
+  return isPtBr
+    ? `se R${instruction.a} = R${instruction.b}, salta para L${instruction.c}`
+    : `if R${instruction.a} = R${instruction.b}, jump to L${instruction.c}`
 }
