@@ -1,7 +1,7 @@
 import type { Instruction, Op } from '../../lib/urm'
 import type { Language } from '../../lib/i18n'
 
-export type EditorMode = 'blocks' | 'text'
+export type EditorMode = 'blocks' | 'text' | 'scripts'
 
 export type ProgramEditorProps = {
   language: Language
@@ -21,4 +21,5 @@ export type ProgramEditorProps = {
   onRemoveInstruction: (id: string) => void
   onMoveInstruction: (sourceId: string, targetId: string) => void
   onInsertInstructionAt: (op: Op, index: number) => void
+  onApplyMainScript: (scriptText: string) => void
 }

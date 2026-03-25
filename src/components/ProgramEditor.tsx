@@ -31,9 +31,46 @@ export function ProgramEditor(props: ProgramEditorProps) {
     onRemoveInstruction,
     onMoveInstruction,
     onInsertInstructionAt,
+    onApplyMainScript,
   } = props
 
   const isPtBr = language === 'pt-BR'
+
+  const learningScripts = [
+    {
+      id: 'addition',
+      title: isPtBr ? 'Adicao (R1 + R2 -> R0)' : 'Addition (R1 + R2 -> R0)',
+      description: isPtBr
+        ? 'Copia R1 para R0 e soma R2 com loop de incremento.'
+        : 'Copies R1 into R0 and adds R2 with an increment loop.',
+      script: 'z(0)\nt(1,0)\nz(3)\nj(3,2,8)\ns(0)\ns(3)\nj(1,1,4)',
+    },
+    {
+      id: 'subtraction',
+      title: isPtBr ? 'Subtracao (R1 - R2 -> R0)' : 'Subtraction (R1 - R2 -> R0)',
+      description: isPtBr
+        ? 'Subtracao truncada em naturais: retorna max(R1 - R2, 0).'
+        : 'Natural-number subtraction: returns max(R1 - R2, 0).',
+      script: 'z(0)\nz(3)\nj(3,1,10)\nj(3,2,7)\ns(3)\nj(1,1,3)\ns(0)\ns(3)\nj(1,1,3)',
+    },
+    {
+      id: 'multiplication',
+      title: isPtBr ? 'Multiplicacao (R1 * R2 -> R0)' : 'Multiplication (R1 * R2 -> R0)',
+      description: isPtBr
+        ? 'Soma R1 repetidamente, R2 vezes, para formar o produto.'
+        : 'Adds R1 repeatedly, R2 times, to build the product.',
+      script: 'z(0)\nz(3)\nj(3,2,12)\nz(4)\nj(4,1,9)\ns(0)\ns(4)\nj(1,1,5)\ns(3)\nj(1,1,3)',
+    },
+    {
+      id: 'division',
+      title: isPtBr ? 'Divisao Inteira (R1 / R2 -> R0)' : 'Integer Division (R1 / R2 -> R0)',
+      description: isPtBr
+        ? 'Calcula piso(R1 / R2). Requer R2 > 0.'
+        : 'Computes floor(R1 / R2). Requires R2 > 0.',
+      script:
+        'z(0)\nz(3)\nj(2,3,22)\nz(5)\nt(3,5)\nz(4)\nj(4,2,11)\ns(5)\ns(4)\nj(1,1,7)\nz(6)\nj(6,5,16)\nj(6,1,20)\ns(6)\nj(1,1,12)\nt(5,3)\ns(0)\nj(3,1,21)\nj(1,1,4)\nj(1,1,22)\nj(1,1,22)',
+    },
+  ] as const
 
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null)
@@ -143,7 +180,7 @@ export function ProgramEditor(props: ProgramEditorProps) {
             <div className="rounded-lg bg-background/90 p-2">
               <Code2 size={20} className="text-[#569cd6]" />
             </div>
-            <CardTitle className="text-xl font-semibold tracking-tight text-foreground">Programa</CardTitle>
+            <CardTitle className="text-xl font-semibold tracking-tight text-foreground">{isPtBr ? 'Programa' : 'Program'}</CardTitle>
           </div>
           <Badge className="border-none bg-muted px-3 py-1 text-xs text-muted-foreground shadow-inner hover:bg-muted/80">
             {program.length} {isPtBr ? 'linhas' : 'lines'}
@@ -165,6 +202,12 @@ export function ProgramEditor(props: ProgramEditorProps) {
               className="flex-1 !h-full min-w-0 rounded-lg px-5 text-sm font-semibold leading-none text-muted-foreground after:hidden hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
             >
               {isPtBr ? 'Modo Texto' : 'Text Mode'}
+            </TabsTrigger>
+            <TabsTrigger
+              value="scripts"
+              className="flex-1 !h-full min-w-0 rounded-lg px-5 text-sm font-semibold leading-none text-muted-foreground after:hidden hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+            >
+              {isPtBr ? 'Scripts Principais' : 'Main Scripts'}
             </TabsTrigger>
           </TabsList>
 
@@ -383,6 +426,36 @@ export function ProgramEditor(props: ProgramEditorProps) {
                 </ul>
               </div>
             )}
+          </TabsContent>
+
+          <TabsContent value="scripts" className="mt-4 space-y-3 flex-1 pb-4">
+            <div className="rounded-xl border border-primary/30 bg-primary/10 p-3 text-sm text-foreground/90 dark:text-[#bcdffa]">
+              {isPtBr
+                ? 'Escolha um script para estudar. Ao aplicar, o simulador carrega o programa e reinicia a maquina.'
+                : 'Choose a script to study. On apply, the simulator loads the program and resets the machine.'}
+            </div>
+
+            {learningScripts.map((item) => (
+              <article key={item.id} className="rounded-xl border border-border bg-background/55 p-4 shadow-sm transition-colors hover:border-primary/40">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="space-y-1">
+                    <h4 className="text-sm font-semibold text-foreground">{item.title}</h4>
+                    <p className="text-xs text-muted-foreground">{item.description}</p>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="bg-primary text-primary-foreground hover:bg-primary/90"
+                    onClick={() => onApplyMainScript(item.script)}
+                  >
+                    {isPtBr ? 'Aplicar script' : 'Apply script'}
+                  </Button>
+                </div>
+                <pre className="mt-3 overflow-x-auto rounded-lg border border-border/70 bg-card/70 p-3 text-xs leading-5 text-foreground/90">
+                  {item.script}
+                </pre>
+              </article>
+            ))}
           </TabsContent>
         </Tabs>
       </CardContent>

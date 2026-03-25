@@ -48,7 +48,7 @@ function App() {
   const isPtBr = language === 'pt-BR'
 
   const [program, setProgram] = useState<Instruction[]>(() => createDemoProgram())
-  const [editorMode, setEditorMode] = useState<'blocks' | 'text'>('blocks')
+  const [editorMode, setEditorMode] = useState<'blocks' | 'text' | 'scripts'>('blocks')
   const [programText, setProgramText] = useState<string>(() => serializeProgram(createDemoProgram()))
   const [syntaxErrors, setSyntaxErrors] = useState<string[]>([])
 
@@ -147,23 +147,36 @@ function App() {
     })
   }, [program, language])
 
-  const applyTextProgram = () => {
-    const parsed = parseProgramText(programText, language)
+  const parseAndApplyProgram = (sourceText: string) => {
+    const parsed = parseProgramText(sourceText, language)
     if (parsed.program.length === 0 && parsed.errors.length === 0) {
       setSyntaxErrors([COPY.emptyProgram[language]])
       setIsRunning(false)
-      return
+      return false
     }
 
     setSyntaxErrors(parsed.errors)
     if (parsed.errors.length > 0) {
       setIsRunning(false)
-      return
+      return false
     }
 
+    setProgramText(sourceText)
     setProgram(parsed.program)
     setMachine(createInitialMachine(initialRegisters, language))
     setIsRunning(false)
+    return true
+  }
+
+  const applyTextProgram = () => {
+    parseAndApplyProgram(programText)
+  }
+
+  const applyMainScript = (scriptText: string) => {
+    const applied = parseAndApplyProgram(scriptText)
+    if (applied) {
+      setEditorMode('text')
+    }
   }
 
   const loadTextFromBlocks = () => {
@@ -333,6 +346,7 @@ function App() {
               onRemoveInstruction={removeInstruction}
               onMoveInstruction={moveInstruction}
               onInsertInstructionAt={insertInstructionAt}
+              onApplyMainScript={applyMainScript}
             />
 
             <MachinePanel
